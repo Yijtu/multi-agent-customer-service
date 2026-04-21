@@ -1,6 +1,6 @@
-# 多代理智能客服系统
+# 多智能体智能客服系统
 
-基于 **LangChain 1.0 + LangGraph** 的多代理客服系统，支持意图分类、动态路由、工具调用、质量检查和**跨轮次用户画像累积**。
+基于 **LangChain 1.0 + LangGraph** 的多agent智能客服系统，支持意图分类、动态路由、工具调用、质量检查和**跨轮次用户画像累积**。
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![LangChain](https://img.shields.io/badge/LangChain-1.0-green)
