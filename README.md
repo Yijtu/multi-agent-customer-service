@@ -49,7 +49,7 @@ flowchart TD
 ### 1. 克隆项目
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Yijtu/multi-agent-customer-service.git
 cd 02_multi_agent_support
 ```
 
