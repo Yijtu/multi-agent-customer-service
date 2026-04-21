@@ -22,9 +22,9 @@
 flowchart TD
     START([START]) --> classify[意图分类]
     classify --> extract[用户画像提取]
-    extract -->|tech_support| tech[技术支持代理]
-    extract -->|order_service| order[订单服务代理]
-    extract -->|product_consult| product[产品咨询代理]
+    extract -->|tech_support| tech[技术支持agent]
+    extract -->|order_service| order[订单服务agent]
+    extract -->|product_consult| product[产品咨询agent]
     extract -->|escalate / 置信度低| escalate[直接升级]
     tech --> quality[质量检查]
     order --> quality
