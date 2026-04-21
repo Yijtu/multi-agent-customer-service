@@ -1,0 +1,7 @@
+# LangChain 1.0 生态
+langchain>=1.2.0
+langchain-deepseek>=1.0.0
+langgraph>=1.1.0
+
+# 环境变量管理
+python-dotenv>=1.0.0
