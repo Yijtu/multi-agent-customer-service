@@ -4,7 +4,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![LangChain](https://img.shields.io/badge/LangChain-1.0-green)
-![LangGraph](https://img.shields.io/badge/LangGraphorange)
+![LangGraph](https://img.shields.io/badge/LangGraph-orange)
 
 ---
 
