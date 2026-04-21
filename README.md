@@ -81,7 +81,7 @@ python main.py
 ## 项目结构
 
 ```
-02_multi_agent_support/
+multi-agent-customer-service
 ├── main.py                  # 入口：演示场景 + 交互循环
 ├── system.py                # LangGraph 工作流编排
 ├── config.py                # 模型初始化 + 阈值常量
