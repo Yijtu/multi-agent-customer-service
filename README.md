@@ -3,8 +3,8 @@
 基于 **LangChain 1.0 + LangGraph** 的多代理客服系统，支持意图分类、动态路由、工具调用、质量检查和**跨轮次用户画像累积**。
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![LangChain](https://img.shields.io/badge/LangChain-1.2-green)
-![LangGraph](https://img.shields.io/badge/LangGraph-1.1-orange)
+![LangChain](https://img.shields.io/badge/LangChain-1.0-green)
+![LangGraph](https://img.shields.io/badge/LangGraphorange)
 
 ---
 
