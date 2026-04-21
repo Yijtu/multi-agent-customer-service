@@ -50,7 +50,7 @@ flowchart TD
 
 ```bash
 git clone https://github.com/Yijtu/multi-agent-customer-service.git
-cd 02_multi_agent_support
+cd multi-agent-customer-service
 ```
 
 ### 2. 安装依赖
