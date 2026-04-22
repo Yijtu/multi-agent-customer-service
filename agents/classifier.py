@@ -1,6 +1,6 @@
-"""意图分类代理。
+"""意图分类Agent。
 
-根据用户消息判断应该路由到哪个业务代理：
+根据用户消息判断应该路由到哪个业务Agent：
 - tech_support: 技术问题
 - order_service: 订单相关
 - product_consult: 产品咨询

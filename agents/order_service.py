@@ -1,4 +1,4 @@
-"""订单服务代理。
+"""订单服务Agent。
 
 负责：订单查询、物流跟踪、退换货咨询。
 可用工具：query_order, track_shipping
@@ -9,7 +9,7 @@ from tools.order_tools import query_order, track_shipping
 
 
 class OrderServiceAgent(BaseBusinessAgent):
-    """订单服务代理。"""
+    """订单服务Agent。"""
 
     tools = [query_order, track_shipping]
 

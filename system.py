@@ -1,6 +1,6 @@
-"""多代理客服系统主类。
+"""多Agent客服系统主类。
 
-使用 LangGraph 编排：意图分类 → 画像提取 → 业务代理 → 质量检查 → 响应 / 升级。
+使用 LangGraph 编排：意图分类 → 画像提取 → 业务Agent → 质量检查 → 响应 / 升级。
 
 通过 InMemorySaver 为每个 thread_id 持久化 state，
 实现跨轮次的 user_profile 累积。
@@ -23,7 +23,7 @@ from state import CustomerServiceState
 
 
 class CustomerServiceSystem:
-    """多代理客服系统。"""
+    """多Agent客服系统。"""
 
     def __init__(self):
         self.classifier = IntentClassifier()
@@ -59,7 +59,7 @@ class CustomerServiceSystem:
 
     def _tech_support_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：技术支持处理。"""
-        print("🔧 技术支持代理处理中...")
+        print("🔧 技术支持Agent处理中...")
         state["agent_response"] = self.tech_agent.handle(
             state["user_message"],
             profile=state.get("user_profile"),
@@ -68,7 +68,7 @@ class CustomerServiceSystem:
 
     def _order_service_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：订单服务处理。"""
-        print("📦 订单服务代理处理中...")
+        print("📦 订单服务Agent处理中...")
         state["agent_response"] = self.order_agent.handle(
             state["user_message"],
             profile=state.get("user_profile"),
@@ -77,7 +77,7 @@ class CustomerServiceSystem:
 
     def _product_consult_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点:产品咨询处理。"""
-        print("🛍️ 产品咨询代理处理中...")
+        print("🛍️ 产品咨询Agent处理中...")
         state["agent_response"] = self.product_agent.handle(
             state["user_message"],
             profile=state.get("user_profile"),
@@ -131,7 +131,7 @@ class CustomerServiceSystem:
     def _route_to_agent(
         self, state: CustomerServiceState
     ) -> Literal["tech_support", "order_service", "product_consult", "escalate"]:
-        """条件路由：根据 intent 和 confidence 决定走哪个代理。"""
+        """条件路由：根据 intent 和 confidence 决定走哪个Agent。"""
         if state["confidence"] < MIN_INTENT_CONFIDENCE:
             return "escalate"
 

@@ -1,4 +1,4 @@
-"""多代理客服系统 —— 启动入口。
+"""多Agent客服系统 —— 启动入口。
 
 运行方式：
     cd 02_multi_agent_support
@@ -129,7 +129,7 @@ def run_interactive(system: CustomerServiceSystem) -> None:
 def main() -> None:
     """程序入口。"""
     print("=" * 60)
-    print("🤖 多代理智能客服系统演示（含用户画像）")
+    print("🤖 多Agent智能客服系统演示（含用户画像）")
     print("=" * 60)
 
     print("\n📦 初始化客服系统...")

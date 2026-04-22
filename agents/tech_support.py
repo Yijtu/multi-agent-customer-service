@@ -1,4 +1,4 @@
-"""技术支持代理。
+"""技术支持Agent。
 
 负责：故障排除、使用帮助、FAQ 查询。
 可用工具：search_faq
@@ -9,7 +9,7 @@ from tools.product_tools import search_faq
 
 
 class TechSupportAgent(BaseBusinessAgent):
-    """技术支持代理。"""
+    """技术支持Agent。"""
 
     tools = [search_faq]
 

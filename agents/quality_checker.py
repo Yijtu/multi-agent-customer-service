@@ -1,7 +1,7 @@
-"""回复质量检查代理。
+"""回复质量检查Agent。
 
 对业务 Agent 生成的回复做评分，分数过低触发升级。
-与业务 Agent 不同，本代理不使用工具，只用 LCEL 管道调 LLM。
+与业务 Agent 不同，本Agent不使用工具，只用 LCEL 管道调 LLM。
 """
 
 from typing import Any, Dict

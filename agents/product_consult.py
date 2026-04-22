@@ -1,4 +1,4 @@
-"""产品咨询代理。
+"""产品咨询Agent。
 
 负责：产品介绍、功能讲解、按预算推荐。
 可用工具：search_product, get_product_recommendations
@@ -9,7 +9,7 @@ from tools.product_tools import search_product, get_product_recommendations
 
 
 class ProductConsultAgent(BaseBusinessAgent):
-    """产品咨询代理。"""
+    """产品咨询Agent。"""
 
     tools = [search_product, get_product_recommendations]
 
