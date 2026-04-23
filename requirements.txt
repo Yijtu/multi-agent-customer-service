@@ -2,6 +2,13 @@
 langchain>=1.2.0
 langchain-deepseek>=1.0.0
 langgraph>=1.1.0
+langgraph-checkpoint-sqlite>=2.0.0
+
+# 数据库
+sqlalchemy>=2.0.0
+
+# Web UI
+streamlit>=1.30.0
 
 # 环境变量管理
 python-dotenv>=1.0.0

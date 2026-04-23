@@ -31,7 +31,7 @@ class IntentClassifier:
 - escalate: 投诉、无法理解、需要人工
 
 返回格式（JSON）：
-{{"intent": "意图类型", "confidence": 0.0-1.0, "reason": "分类原因"}}
+{{"intent": "意图类型", "confidence": 0.0-1.0, "reason": "分类原因", "language": "用户消息的语言代码，如 zh/en/ja/ko"}}
 
 只返回JSON，不要其他内容。"""),
             ("human", "{message}"),

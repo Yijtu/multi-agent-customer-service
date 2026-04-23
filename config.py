@@ -4,6 +4,7 @@
 1. 环境变量加载（API Key）
 2. LLM 模型初始化
 3. 业务阈值常量
+4. 持久化路径
 """
 
 import os
@@ -36,3 +37,23 @@ MIN_INTENT_CONFIDENCE = 0.6
 
 # 回复质量评分下限：低于此值触发升级
 MIN_QUALITY_SCORE = 0.6
+
+# ==================== 持久化 ====================
+
+# Checkpointer 数据库路径（SQLite）
+CHECKPOINT_DB_PATH = os.path.join(
+    os.path.dirname(__file__), "data", "checkpoints.db"
+)
+
+# 业务数据库路径（SQLite）
+BUSINESS_DB_PATH = os.path.join(
+    os.path.dirname(__file__), "data", "business.db"
+)
+
+# ==================== 多语言 ====================
+
+# 支持的语言列表
+SUPPORTED_LANGUAGES = ["zh", "en", "ja", "ko"]
+
+# 默认回复语言
+DEFAULT_LANGUAGE = "zh"

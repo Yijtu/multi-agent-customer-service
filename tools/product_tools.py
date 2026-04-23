@@ -4,7 +4,11 @@ import json
 
 from langchain_core.tools import tool
 
-from data.mock_data import MOCK_PRODUCTS, FAQ_DATABASE
+from data.database import (
+    search_products_by_keyword,
+    get_products_by_budget,
+    search_faq_by_keyword,
+)
 
 
 @tool
@@ -17,17 +21,17 @@ def search_product(keyword: str) -> str:
     Returns:
         匹配产品的信息
     """
-    results = []
-    for name, info in MOCK_PRODUCTS.items():
-        if keyword.lower() in name.lower():
-            results.append({
-                "name": name,
-                "price": f"¥{info['price']}",
-                "features": info["features"],
-                "rating": f"{info['rating']}分",
-            })
-
-    if results:
+    products = search_products_by_keyword(keyword)
+    if products:
+        results = [
+            {
+                "name": p["name"],
+                "price": f"¥{p['price']}",
+                "features": p["features"],
+                "rating": f"{p['rating']}分",
+            }
+            for p in products
+        ]
         return json.dumps(results, ensure_ascii=False, indent=2)
     return f"未找到包含 '{keyword}' 的产品"
 
@@ -43,19 +47,17 @@ def get_product_recommendations(budget: int, category: str = "全部") -> str:
     Returns:
         推荐产品列表（JSON，最多 3 个，按评分排序）
     """
-    recommendations = []
-    for name, info in MOCK_PRODUCTS.items():
-        if info["price"] <= budget:
-            recommendations.append({
-                "name": name,
-                "price": f"¥{info['price']}",
-                "rating": info["rating"],
-            })
-
-    recommendations.sort(key=lambda x: float(x["rating"]), reverse=True)
-
-    if recommendations:
-        return json.dumps(recommendations[:3], ensure_ascii=False, indent=2)
+    products = get_products_by_budget(budget, limit=3)
+    if products:
+        recommendations = [
+            {
+                "name": p["name"],
+                "price": f"¥{p['price']}",
+                "rating": p["rating"],
+            }
+            for p in products
+        ]
+        return json.dumps(recommendations, ensure_ascii=False, indent=2)
     return f"在预算 ¥{budget} 内暂无推荐产品"
 
 
@@ -69,7 +71,7 @@ def search_faq(problem_type: str) -> str:
     Returns:
         相关 FAQ 答案
     """
-    for key, answer in FAQ_DATABASE.items():
-        if problem_type in key or key in problem_type:
-            return f"【{key}】\n{answer}"
+    result = search_faq_by_keyword(problem_type)
+    if result:
+        return f"【{result['keyword']}】\n{result['answer']}"
     return "未找到相关FAQ，建议联系人工客服获取更多帮助。"

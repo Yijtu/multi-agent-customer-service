@@ -7,9 +7,11 @@
 """
 
 from datetime import datetime
+import sqlite3
 from typing import Any, Dict, List, Literal, Optional
 
 from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START, END
 
 from agents.classifier import IntentClassifier
@@ -18,12 +20,25 @@ from agents.product_consult import ProductConsultAgent
 from agents.profile_extractor import ProfileExtractor
 from agents.quality_checker import QualityChecker
 from agents.tech_support import TechSupportAgent
-from config import MIN_INTENT_CONFIDENCE, MIN_QUALITY_SCORE
+from config import MIN_INTENT_CONFIDENCE, MIN_QUALITY_SCORE, CHECKPOINT_DB_PATH
+from middleware import (
+    MiddlewareChain,
+    LoggingMiddleware,
+    TimingMiddleware,
+    ErrorHandlerMiddleware,
+    RateLimiterMiddleware,
+)
 from state import CustomerServiceState
 
 
 class CustomerServiceSystem:
     """多Agent客服系统。"""
+
+    # handoff 最大次数，防止无限循环
+    MAX_HANDOFFS = 2
+
+    # Agent 名称 → Agent 实例的映射（在 __init__ 中初始化）
+    _agent_map: Dict[str, Any] = {}
 
     def __init__(self):
         self.classifier = IntentClassifier()
@@ -33,60 +48,75 @@ class CustomerServiceSystem:
         self.product_agent = ProductConsultAgent()
         self.quality_checker = QualityChecker()
 
+        # Agent 名称 → 实例映射，用于 handoff 动态路由
+        self._agent_map = {
+            "tech_support": self.tech_agent,
+            "order_service": self.order_agent,
+            "product_consult": self.product_agent,
+        }
+
+        # 中间件链：日志 → 计时 → 异常捕获 → 限流
+        self.mw_chain = MiddlewareChain([
+            LoggingMiddleware(),
+            TimingMiddleware(),
+            ErrorHandlerMiddleware(),
+            RateLimiterMiddleware(),
+        ])
+
         # Checkpointer: 按 thread_id 跨轮次保存 state
-        self.checkpointer = InMemorySaver()
+        # 优先使用 SqliteSaver 持久化，失败时回退到 InMemorySaver
+        try:
+            self._sqlite_conn = sqlite3.connect(CHECKPOINT_DB_PATH, check_same_thread=False)
+            self.checkpointer = SqliteSaver(conn=self._sqlite_conn)
+        except Exception:
+            print("⚠️ SqliteSaver 初始化失败，回退到 InMemorySaver")
+            self._sqlite_conn = None
+            self.checkpointer = InMemorySaver()
         self.graph = self._build_graph()
 
     # ==================== 节点函数 ====================
 
     def _classify_intent(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：意图分类。"""
-        print("🔍 分析用户意图...")
         result = self.classifier.classify(state["user_message"])
         state["intent"] = result.get("intent", "escalate")
         state["confidence"] = result.get("confidence", 0.5)
-        print(f"   意图: {state['intent']} (置信度: {state['confidence']:.2f})")
         return state
 
     def _extract_profile(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：从当前消息中提取画像，合并到已有 profile。"""
-        print("👤 提取用户画像...")
         current = state.get("user_profile") or {}
         updated = self.profile_extractor.extract(state["user_message"], current)
         state["user_profile"] = updated
-        print(f"   当前画像: {updated}")
+        return state
+
+    def _run_business_agent(self, agent_name: str, state: CustomerServiceState) -> CustomerServiceState:
+        """通用业务 Agent 执行器，支持 handoff。"""
+        agent = self._agent_map[agent_name]
+        response, handoff_target = agent.handle(
+            state["user_message"],
+            profile=state.get("user_profile"),
+        )
+        state["agent_response"] = response
+        state["handoff_target"] = handoff_target
+        if handoff_target:
+            state["handoff_count"] = state.get("handoff_count", 0) + 1
         return state
 
     def _tech_support_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：技术支持处理。"""
-        print("🔧 技术支持Agent处理中...")
-        state["agent_response"] = self.tech_agent.handle(
-            state["user_message"],
-            profile=state.get("user_profile"),
-        )
-        return state
+        return self._run_business_agent("tech_support", state)
 
     def _order_service_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：订单服务处理。"""
-        print("📦 订单服务Agent处理中...")
-        state["agent_response"] = self.order_agent.handle(
-            state["user_message"],
-            profile=state.get("user_profile"),
-        )
-        return state
+        return self._run_business_agent("order_service", state)
 
     def _product_consult_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点:产品咨询处理。"""
-        print("🛍️ 产品咨询Agent处理中...")
-        state["agent_response"] = self.product_agent.handle(
-            state["user_message"],
-            profile=state.get("user_profile"),
-        )
-        return state
+        return self._run_business_agent("product_consult", state)
 
     def _escalate_handler(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：直接升级（分类阶段就决定转人工）。"""
-        print("👤 升级到人工客服...")
         state["needs_escalation"] = True
         state["escalation_reason"] = "意图识别置信度低或用户要求人工服务"
         state["agent_response"] = """非常抱歉，您的问题需要人工客服来处理。
@@ -103,7 +133,6 @@ class CustomerServiceSystem:
 
     def _quality_check(self, state: CustomerServiceState) -> CustomerServiceState:
         """节点：回复质量检查。"""
-        print("✅ 执行质量检查...")
         result = self.quality_checker.check(
             state["user_message"],
             state["agent_response"],
@@ -114,7 +143,6 @@ class CustomerServiceSystem:
             state["needs_escalation"] = True
             state["escalation_reason"] = result.get("reason", "质量检查未通过")
 
-        print(f"   质量评分: {state['quality_score']:.2f}")
         return state
 
     def _final_escalate(self, state: CustomerServiceState) -> CustomerServiceState:
@@ -142,11 +170,26 @@ class CustomerServiceSystem:
 
     def _should_escalate(
         self, state: CustomerServiceState
-    ) -> Literal["escalate_final", "respond"]:
-        """条件路由：质量检查后决定是否升级。"""
+    ) -> Literal["escalate_final", "handoff_route", "respond"]:
+        """条件路由：质量检查后决定是否升级或 handoff。"""
+        # 检查是否需要 handoff
+        handoff_target = state.get("handoff_target", "")
+        handoff_count = state.get("handoff_count", 0)
+        if handoff_target and handoff_count <= self.MAX_HANDOFFS:
+            return "handoff_route"
+
         if state.get("needs_escalation", False):
             return "escalate_final"
         return "respond"
+
+    def _handoff_route(self, state: CustomerServiceState) -> CustomerServiceState:
+        """节点：handoff 路由——将请求转发给目标 Agent。"""
+        target = state.get("handoff_target", "")
+        if target and target in self._agent_map:
+            print(f"   🔄 Hand-off 到 {target}")
+            state["handoff_target"] = ""  # 清除标记防止重复 handoff
+            return self._run_business_agent(target, state)
+        return state
 
     # ==================== 图构建 ====================
 
@@ -154,14 +197,16 @@ class CustomerServiceSystem:
         """构建并编译 LangGraph 工作流。"""
         graph = StateGraph(CustomerServiceState)
 
-        graph.add_node("classify", self._classify_intent)
-        graph.add_node("extract_profile", self._extract_profile)
-        graph.add_node("tech_support", self._tech_support_handler)
-        graph.add_node("order_service", self._order_service_handler)
-        graph.add_node("product_consult", self._product_consult_handler)
-        graph.add_node("escalate", self._escalate_handler)
-        graph.add_node("quality_check", self._quality_check)
-        graph.add_node("escalate_final", self._final_escalate)
+        wrap = self.mw_chain.wrap
+        graph.add_node("classify", wrap("classify", self._classify_intent))
+        graph.add_node("extract_profile", wrap("extract_profile", self._extract_profile))
+        graph.add_node("tech_support", wrap("tech_support", self._tech_support_handler))
+        graph.add_node("order_service", wrap("order_service", self._order_service_handler))
+        graph.add_node("product_consult", wrap("product_consult", self._product_consult_handler))
+        graph.add_node("escalate", wrap("escalate", self._escalate_handler))
+        graph.add_node("quality_check", wrap("quality_check", self._quality_check))
+        graph.add_node("escalate_final", wrap("escalate_final", self._final_escalate))
+        graph.add_node("handoff_route", wrap("handoff_route", self._handoff_route))
 
         # 起点 → 分类 → 画像提取 → 路由
         graph.add_edge(START, "classify")
@@ -188,10 +233,13 @@ class CustomerServiceSystem:
             self._should_escalate,
             {
                 "escalate_final": "escalate_final",
+                "handoff_route": "handoff_route",
                 "respond": END,
             },
         )
 
+        # handoff 后重新走质量检查
+        graph.add_edge("handoff_route", "quality_check")
         graph.add_edge("escalate_final", END)
 
         # 编译时传入 checkpointer, 自动按 thread_id 保存/恢复 state
@@ -230,6 +278,8 @@ class CustomerServiceSystem:
             "needs_escalation": False,
             "escalation_reason": "",
             "quality_score": 0.0,
+            "handoff_target": "",
+            "handoff_count": 0,
             "metadata": {"timestamp": datetime.now().isoformat()},
         }
 
@@ -244,6 +294,7 @@ class CustomerServiceSystem:
             "quality_score": result["quality_score"],
             "escalated": result["needs_escalation"],
             "profile": result.get("user_profile", {}),
+            "metadata": result.get("metadata", {}),
         }
 
     def get_profile(self, thread_id: str) -> Dict[str, Any]:

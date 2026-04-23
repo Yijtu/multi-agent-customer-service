@@ -38,6 +38,8 @@ class CustomerServiceState(TypedDict):
         needs_escalation: 是否需要升级到人工客服。
         escalation_reason: 升级原因。
         quality_score: 回复质量评分，范围 [0.0, 1.0]。
+        handoff_target: Hand-off 目标 Agent（如 "order_service"），空串表示无 handoff。
+        handoff_count: 当前轮次已发生的 handoff 次数，防止无限循环。
         metadata: 附加元信息（时间戳、trace_id 等）。
     """
 
@@ -50,4 +52,6 @@ class CustomerServiceState(TypedDict):
     needs_escalation: bool
     escalation_reason: str
     quality_score: float
+    handoff_target: str
+    handoff_count: int
     metadata: Dict[str, Any]

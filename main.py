@@ -5,6 +5,7 @@
     python main.py
 """
 
+from data.seed import run_seed
 from system import CustomerServiceSystem
 
 
@@ -133,6 +134,7 @@ def main() -> None:
     print("=" * 60)
 
     print("\n📦 初始化客服系统...")
+    run_seed()  # 自动初始化数据库并导入种子数据
     system = CustomerServiceSystem()
     print("✅ 系统初始化完成！")
 

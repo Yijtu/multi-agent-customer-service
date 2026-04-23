@@ -9,7 +9,7 @@ import json
 
 from langchain_core.tools import tool
 
-from data.mock_data import MOCK_ORDERS
+from data.database import query_order_by_id, track_shipping_by_number
 
 
 @tool
@@ -22,7 +22,7 @@ def query_order(order_id: str) -> str:
     Returns:
         订单详情的 JSON 字符串
     """
-    order = MOCK_ORDERS.get(order_id.upper())
+    order = query_order_by_id(order_id)
     if order:
         return json.dumps(order, ensure_ascii=False, indent=2)
     return f"未找到订单 {order_id}"
@@ -38,6 +38,10 @@ def track_shipping(tracking_number: str) -> str:
     Returns:
         物流状态信息
     """
+    result = track_shipping_by_number(tracking_number)
+    if result:
+        return result
+    # 兜底：按物流单号前缀猜测快递公司
     if tracking_number.startswith("SF"):
         return f"顺丰快递 {tracking_number}: 包裹已到达配送站，预计今日送达"
     elif tracking_number.startswith("YT"):

@@ -15,6 +15,12 @@
 - 👤 **用户画像累积**：通过 LangGraph Checkpointer 实现跨轮次的偏好、预算、订单记忆
 - ✅ **质量检查层**：LLM 自评回复质量，低分自动升级到人工
 - 🔀 **条件路由**：基于置信度和分类结果动态决定工作流路径
+- 🔄 **Agent Hand-off**：业务代理间可互相移交任务（`[HANDOFF:target]` 标记）
+- 🌐 **多语言支持**：自动检测用户语言，切换回复语言（zh/en/ja/ko）
+- 🛡️ **中间件管理**：日志、计时、异常捕获、令牌桶限流四层中间件链
+- 💾 **持久化存储**：SqliteSaver 检查点 + SQLAlchemy 业务数据库
+- 📊 **可观测性**：调用链追踪（Trace），记录每个节点执行时间与状态
+- 🖥️ **Web UI**：Streamlit 聊天界面，支持会话管理、画像展示、Trace 查看
 
 ## 架构图
 
@@ -31,6 +37,8 @@ flowchart TD
     product --> quality
     quality -->|质量达标| END([END])
     quality -->|质量差| final_esc[附加人工提示]
+    quality -->|HANDOFF| handoff[Hand-off 路由]
+    handoff --> quality
     escalate --> END
     final_esc --> END
 ```
@@ -41,7 +49,9 @@ flowchart TD
 |---|---|
 | **LangChain 1.0** | LLM 编排、LCEL 管道、`create_agent` |
 | **LangGraph** | 工作流编排、状态管理、条件路由 |
-| **LangGraph Checkpointer** | 跨轮次状态持久化（InMemorySaver） |
+| **LangGraph Checkpointer** | 跨轮次状态持久化（SqliteSaver） |
+| **SQLAlchemy** | ORM 业务数据库（订单/产品/FAQ） |
+| **Streamlit** | Web 聊天界面 |
 | **DeepSeek** | LLM 后端（国内低成本方案） |
 
 ## 快速开始
@@ -75,7 +85,11 @@ cp .env.example .env
 ### 4. 运行
 
 ```bash
+# 命令行模式
 python main.py
+
+# Web UI 模式
+streamlit run app.py
 ```
 
 ## 项目结构
@@ -83,28 +97,39 @@ python main.py
 ```
 multi-agent-customer-service
 ├── main.py                  # 入口：演示场景 + 交互循环
-├── system.py                # LangGraph 工作流编排
-├── config.py                # 模型初始化 + 阈值常量
+├── app.py                   # Streamlit Web UI
+├── system.py                # LangGraph 工作流编排 + 中间件集成
+├── config.py                # 模型初始化 + 阈值常量 + 数据库路径
 ├── state.py                 # CustomerServiceState / UserProfile 定义
 │
 ├── agents/                  # 代理层
-│   ├── base.py              # 业务代理基类
+│   ├── base.py              # 业务代理基类（Hand-off + 多语言）
 │   ├── classifier.py        # 意图分类（LCEL 模式）
 │   ├── profile_extractor.py # 用户画像提取
 │   ├── tech_support.py      # 技术支持代理
 │   ├── order_service.py     # 订单服务代理
 │   ├── product_consult.py   # 产品咨询代理
-│   └── quality_checker.py   # 回复质量检查
+│   └── quality_checker.py   # 回复质量检查（多语言评估）
+│
+├── middleware/               # 中间件层
+│   ├── base.py              # Middleware 抽象基类 + MiddlewareChain
+│   ├── logging_mw.py        # 结构化日志 + Trace 写入
+│   ├── timing_mw.py         # 节点耗时统计
+│   ├── error_handler_mw.py  # 异常捕获与记录
+│   └── rate_limiter_mw.py   # 令牌桶限流
 │
 ├── tools/                   # LangChain @tool 函数
 │   ├── order_tools.py       # query_order, track_shipping
 │   └── product_tools.py     # search_product, recommendations, FAQ
 │
 ├── data/
-│   └── mock_data.py         # Mock 数据（订单/产品/FAQ）
+│   ├── mock_data.py         # Mock 数据（保留兼容）
+│   ├── database.py          # SQLAlchemy ORM 数据库层
+│   └── seed.py              # 数据库种子脚本
 │
 └── utils/
-    └── json_parser.py       # 容错 JSON 解析
+    ├── json_parser.py       # 容错 JSON 解析
+    └── tracer.py            # 调用链追踪工具
 ```
 
 ## 核心设计
@@ -147,13 +172,27 @@ print(result["response"])  # 产品代理会基于预算和偏好推荐
 print(system.get_profile("user_A"))  # 查看累积的画像
 ```
 
+## 已完成的优化
+
+1. **中间件管理层**：新增 `middleware/` 模块，实现 before_node / after_node / on_error 三阶段钩子，包含结构化日志、耗时统计、异常捕获、令牌桶限流四个中间件
+2. **持久化 Checkpointer**：从 InMemorySaver 升级为 SqliteSaver，会话状态跨进程持久化
+3. **真实数据库对接**：新增 `data/database.py`（SQLAlchemy ORM）+ `data/seed.py` 种子脚本，工具层从 mock_data 切换到 SQLite 数据库查询
+4. **Agent Hand-off 协作**：业务代理回复中支持 `[HANDOFF:target]` 标记，系统自动将请求转发给目标代理（设有最大次数防止循环）
+5. **多语言支持**：意图分类自动检测用户语言，画像中记录语言偏好，业务代理按用户语言回复
+6. **Streamlit Web UI**：新增 `app.py`，提供聊天界面 + 侧边栏（会话管理、用户画像、调用链追踪）
+7. **可观测性增强**：新增 `utils/tracer.py`，日志中间件自动写入 Trace，UI 中可展开查看每个节点的执行时间与状态
+
 ## 未来可扩展方向
 
-- [ ] 代理间协作（Hand-off / Supervisor 模式）
-- [ ] 多语言支持（根据用户语言切换回复）
-- [ ] 真实数据库对接（替换 `data/mock_data.py`）
-- [ ] 持久化 Checkpointer（SqliteSaver / PostgresSaver）
-- [ ] Web UI（Streamlit / Gradio）
+- [✔] 代理间协作（Hand-off / Supervisor 模式）
+- [✔] 多语言支持（根据用户语言切换回复）
+- [✔] 真实数据库对接（替换 `data/mock_data.py`）
+- [✔] 持久化 Checkpointer（SqliteSaver / PostgresSaver）
+- [✔] Web UI（Streamlit / Gradio）
+- [ ] 单元测试 & 集成测试覆盖
+- [ ] 流式输出（Streaming）
+- [ ] Supervisor 模式（中心调度代理）
+- [ ] PostgresSaver 生产级持久化
 
 ## License
 

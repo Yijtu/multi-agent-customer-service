@@ -52,3 +52,6 @@ desktop.ini
 logs/
 tmp/
 temp/
+
+# ===== SQLite 数据库 =====
+data/*.db

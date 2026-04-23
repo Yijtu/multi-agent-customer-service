@@ -30,6 +30,7 @@ class QualityChecker:
 返回格式（JSON）：
 {{"total_score": 0-100, "needs_escalation": true/false, "reason": "评估说明"}}
 
+注意：如果用户使用非中文提问而客服用中文回复，应适当降低相关性和有用性评分。
 只返回JSON。"""),
             ("human", """用户问题：{user_message}
 客服回复：{agent_response}
