@@ -7,6 +7,11 @@ langgraph-checkpoint-sqlite>=2.0.0
 # 数据库
 sqlalchemy>=2.0.0
 
+# RAG
+chromadb>=0.4.0
+langchain-chroma>=0.2.0
+onnxruntime>=1.14.0
+
 # Web UI
 streamlit>=1.30.0
 

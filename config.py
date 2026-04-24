@@ -50,6 +50,20 @@ BUSINESS_DB_PATH = os.path.join(
     os.path.dirname(__file__), "data", "business.db"
 )
 
+# ==================== RAG ====================
+
+# Chroma 向量数据库持久化路径
+CHROMA_DB_PATH = os.path.join(
+    os.path.dirname(__file__), "data", "chroma_db"
+)
+
+# 知识库文档目录
+KNOWLEDGE_DIR = os.path.join(
+    os.path.dirname(__file__), "data", "knowledge"
+)
+
+# 嵌入模型（使用 Chroma 内置 ONNX MiniLM-L6-v2，无需配置）
+
 # ==================== 多语言 ====================
 
 # 支持的语言列表

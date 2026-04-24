@@ -19,6 +19,7 @@
 - 🌐 **多语言支持**：自动检测用户语言，切换回复语言（zh/en/ja/ko）
 - 🛡️ **中间件管理**：日志、计时、异常捕获、令牌桶限流四层中间件链
 - 💾 **持久化存储**：SqliteSaver 检查点 + SQLAlchemy 业务数据库
+- 📚 **RAG 知识库**：基于 Chroma 向量数据库的语义检索，为 Agent 提供产品文档/技术手册/售后政策知识增强
 - 📊 **可观测性**：调用链追踪（Trace），记录每个节点执行时间与状态
 - 🖥️ **Web UI**：Streamlit 聊天界面，支持会话管理、画像展示、Trace 查看
 
@@ -51,6 +52,8 @@ flowchart TD
 | **LangGraph** | 工作流编排、状态管理、条件路由 |
 | **LangGraph Checkpointer** | 跨轮次状态持久化（SqliteSaver） |
 | **SQLAlchemy** | ORM 业务数据库（订单/产品/FAQ） |
+| **Chroma** | 向量数据库（RAG 语义检索） |
+| **ONNX MiniLM-L6-v2** | Chroma 内置嵌入模型（无需额外依赖） |
 | **Streamlit** | Web 聊天界面 |
 | **DeepSeek** | LLM 后端（国内低成本方案） |
 
@@ -122,7 +125,17 @@ multi-agent-customer-service
 │   ├── order_tools.py       # query_order, track_shipping
 │   └── product_tools.py     # search_product, recommendations, FAQ
 │
+├── rag/                     # RAG 检索增强生成
+│   ├── embeddings.py        # HuggingFace 本地嵌入模型
+│   ├── vector_store.py      # Chroma 向量数据库管理
+│   ├── document_loader.py   # 文档加载与分块
+│   └── build_index.py       # 知识库索引构建脚本
+│
 ├── data/
+│   ├── knowledge/           # RAG 知识库文档（Markdown）
+│   │   ├── products.md      # 产品详细介绍
+│   │   ├── tech_faq.md      # 技术支持常见问题
+│   │   └── policies.md      # 售后政策与服务条款
 │   ├── mock_data.py         # Mock 数据（保留兼容）
 │   ├── database.py          # SQLAlchemy ORM 数据库层
 │   └── seed.py              # 数据库种子脚本
@@ -181,6 +194,8 @@ print(system.get_profile("user_A"))  # 查看累积的画像
 5. **多语言支持**：意图分类自动检测用户语言，画像中记录语言偏好，业务代理按用户语言回复
 6. **Streamlit Web UI**：新增 `app.py`，提供聊天界面 + 侧边栏（会话管理、用户画像、调用链追踪）
 7. **可观测性增强**：新增 `utils/tracer.py`，日志中间件自动写入 Trace，UI 中可展开查看每个节点的执行时间与状态
+
+8. **RAG 知识库检索**：新增 `rag/` 模块，基于 Chroma 向量数据库 + HuggingFace 本地嵌入模型，为技术支持和产品咨询 Agent 提供语义检索能力，支持按类别过滤（product/tech/policy）
 
 ## 未来可扩展方向
 

@@ -135,6 +135,11 @@ def main() -> None:
 
     print("\n📦 初始化客服系统...")
     run_seed()  # 自动初始化数据库并导入种子数据
+
+    # 初始化 RAG 知识库索引
+    from rag.build_index import build_index
+    build_index()
+
     system = CustomerServiceSystem()
     print("✅ 系统初始化完成！")
 
